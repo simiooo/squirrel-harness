@@ -31,8 +31,9 @@ const main = async (): Promise<void> => {
   Logger.info("Semantic mappings complete.");
 
   // 3. Synthesis: Persist the index for the agent to use.
+  const index = await indexer.indexSkills(skills);
   await fs.mkdir(path.dirname(CONFIG.INDEX_OUTPUT), { recursive: true });
-  await fs.writeFile(CONFIG.INDEX_OUTPUT, JSON.stringify(skills, null, 2));
+  await fs.writeFile(CONFIG.INDEX_OUTPUT, JSON.stringify(index, null, 2));
   Logger.info(`Harness index saved to ${CONFIG.INDEX_OUTPUT}`);
   Logger.info("The synthesis of structure and perception is complete.");
 

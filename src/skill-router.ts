@@ -31,7 +31,10 @@ export class SkillRouter {
    */
   async init(): Promise<void> {
     Logger.info("Initializing semantic router model...");
-    this.extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+    this.extractor = await pipeline(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2",
+    );
   }
 
   /**
@@ -52,14 +55,20 @@ export class SkillRouter {
     if (this.index.length === 0) await this.loadIndex();
 
     // 1. Embed the user's intent
-    const queryEmbedding = await this.extractor([query], { pooling: "mean", normalize: true });
-    const queryVector = queryEmbedding[0].tolist();
+    const queryResult = await this.extractor(query, {
+      pooling: "mean",
+      normalize: true,
+    });
+    const queryVector: number[] = queryResult.tolist();
 
     // 2. Calculate similarity for all skills
-    const scoredSkills = this.index.map((item) => ({
-      meta: item.meta,
-      score: this.cosineSimilarity(queryVector, item.embedding),
-    }));
+    const scoredSkills = this.index.map((item) => {
+      const storedVector = item.embedding;
+      return {
+        meta: item.meta,
+        score: this.cosineSimilarity(queryVector, storedVector),
+      };
+    });
 
     // 3. Sort and return top-K (Thesis -> Synthesis)
     scoredSkills.sort((a, b) => b.score - a.score);
