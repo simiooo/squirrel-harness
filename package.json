@@ -1,0 +1,39 @@
+{
+  "name": "sikuai-harness",
+  "version": "1.0.0",
+  "description": "Sikuai Harness: A dialectic agent optimization system powered by VoidZero stack",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "rolldown --config rolldown.config.ts",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint src --fix",
+    "fmt": "oxfmt src",
+    "fmt:check": "oxfmt --check src",
+    "test": "vitest run",
+    "dream": "tsx src/index.ts"
+  },
+  "keywords": [
+    "openclaw",
+    "agent",
+    "harness",
+    "voidzero",
+    "rolldown"
+  ],
+  "author": "Sikuai",
+  "license": "ISC",
+  "packageManager": "pnpm@10.32.1",
+  "dependencies": {
+    "@huggingface/transformers": "^4.0.1",
+    "rolldown": "^1.0.0-rc.13"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "oxfmt": "^0.43.0",
+    "oxlint": "^1.58.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}

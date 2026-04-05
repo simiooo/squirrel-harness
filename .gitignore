@@ -24,7 +24,6 @@ coverage
 
 # Dependency directories
 node_modules/
-jspm_packages/
 
 # Optional npm cache directory
 .npm
@@ -45,17 +44,21 @@ jspm_packages/
 .env
 .env.test
 
-# parcel-cache
+# parcel-caache
 .parcel-cache
 
-# Next.js build output
-.next
-out
+# Build output
+dist/
 
 # Your local files
 data/
-*.json
+
+# Test coverage
+coverage/
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Vitest
+.vitest/
