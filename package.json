@@ -1,21 +1,23 @@
 {
-  "name": "sikuai-harness",
+  "name": "openclaw-plugin-sikuai-harness",
   "version": "1.0.0",
-  "description": "Sikuai Harness: A dialectic agent optimization system powered by VoidZero stack",
+  "description": "A dialectic optimization harness for OpenClaw agents.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/plugin.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/plugin.ts",
     "build": "rolldown --config rolldown.config.ts",
     "lint": "oxlint src",
     "lint:fix": "oxlint src --fix",
     "fmt": "oxfmt src",
     "fmt:check": "oxfmt --check src",
     "test": "vitest run",
-    "dream": "tsx src/index.ts"
+    "install:local": "openclaw plugins add . && tsx scripts/install.ts",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "openclaw",
+    "openclaw-plugin",
     "agent",
     "harness",
     "voidzero",
