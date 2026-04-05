@@ -3,6 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import { scanAllSkills } from "./skill-scanner.ts";
 import { SemanticIndexer } from "./semantic-indexer.ts";
+import { SkillRouter } from "./skill-router.ts";
 import { ReflectionEngine } from "./reflection-engine.ts";
 import { CONFIG } from "./config.ts";
 import { Logger } from "./logger.ts";
@@ -42,6 +43,15 @@ const main = async (): Promise<void> => {
   const insight = await dreamer.reflect(logs);
   await dreamer.consolidate(insight);
   Logger.info(`Dreamt: "${insight.summary}"`);
+
+  // 5. Real-time Routing Demo: The Nervous System.
+  const router = new SkillRouter();
+  await router.init();
+
+  const testQuery = "I need to plan the next release features";
+  const matches = await router.route(testQuery);
+  Logger.info(`Routing query: "${testQuery}"`);
+  Logger.info(`Top match: ${matches[0]?.name || "None"}`);
 };
 
 main().catch((err) => {
