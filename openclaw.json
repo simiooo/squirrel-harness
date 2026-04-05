@@ -1,0 +1,14 @@
+{
+  "id": "sikuai-harness",
+  "name": "Sikuai Harness",
+  "version": "1.0.0",
+  "description": "A dialectic optimization harness for OpenClaw agents.",
+  "main": "dist/plugin.js",
+  "skills": [],
+  "hooks": [
+    "session:end"
+  ],
+  "tools": [
+    "route-skill"
+  ]
+}

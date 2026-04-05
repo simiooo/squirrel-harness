@@ -121,35 +121,20 @@ var SemanticIndexer = class {
 var SkillRouter = class {
 	index = [];
 	extractor;
-	/**
-	* Loads the pre-computed semantic index.
-	*/
 	async loadIndex() {
 		try {
 			const data = await fs.readFile(CONFIG.INDEX_OUTPUT, "utf-8");
 			this.index = JSON.parse(data);
-			Logger.info(`Index loaded with ${this.index.length} skills.`);
 		} catch {
-			Logger.error("Index not found. Please run the indexer first.");
 			throw new Error("Skill index missing");
 		}
 	}
-	/**
-	* Initializes the embedding model.
-	*/
 	async init() {
-		Logger.info("Initializing semantic router model...");
 		this.extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
 	}
-	/**
-	* Computes cosine similarity between two vectors.
-	*/
 	cosineSimilarity(a, b) {
 		return a.reduce((sum, val, i) => sum + val * b[i], 0) / (Math.sqrt(a.reduce((sum, val) => sum + val * val, 0)) * Math.sqrt(b.reduce((sum, val) => sum + val * val, 0)) || 1);
 	}
-	/**
-	* Finds the top-K skills for a given user query.
-	*/
 	async route(query, k = 3) {
 		if (!this.extractor) await this.init();
 		if (this.index.length === 0) await this.loadIndex();
@@ -227,25 +212,17 @@ var ReflectionEngine = class {
 //#endregion
 //#region src/deep-dreamer.ts
 /**
-* The Deep Dreamer.
-* Connects to an LLM to perform dialectic analysis on agent logs.
+* The Deep Dreamer (OpenClaw Native).
+* Instead of calling an API directly, it prepares the prompt for the OpenClaw runtime.
 */
 var DeepDreamer = class {
-	apiKey;
-	model;
-	constructor(apiKey, model = "openrouter/qwen/qwen3.6-plus:free") {
-		this.apiKey = apiKey;
-		this.model = model;
-	}
 	/**
-	* Sends raw logs to the LLM for dialectic processing.
+	* Generates the dialectic prompt for the OpenClaw agent.
 	*/
-	async reflect(logs) {
-		if (!logs) return "A day of silence.";
-		Logger.info("Entering the Deep Dream state...");
-		const prompt = `
-      Act as a Hegelian dialectician for an AI agent system. 
-      Analyze the following daily logs:
+	generateDialecticPrompt(logs) {
+		return `
+      Act as a Hegelian dialectician for the OpenClaw agent system. 
+      Analyze the following session logs:
       """
       ${logs}
       """
@@ -254,28 +231,14 @@ var DeepDreamer = class {
       1. Thesis (What worked well?)
       2. Antithesis (What failed or contradicted the goals?)
       3. Synthesis (What specific rules or skills should be evolved?)
+      
+      Output the result as a structured markdown block.
     `;
-		try {
-			const insight = (await (await fetch("https://openrouter.ai/api/v1/chat/completions", {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${this.apiKey}`,
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({
-					model: this.model,
-					messages: [{
-						role: "user",
-						content: prompt
-					}]
-				})
-			})).json()).choices?.[0]?.message?.content || "The dream was void.";
-			Logger.info("Deep Dream complete.");
-			return insight;
-		} catch (err) {
-			Logger.error("Deep Dream interrupted:", String(err));
-			return "The dream was disturbed by external forces.";
-		}
+	}
+	async reflect(logs) {
+		if (!logs) return "A day of silence.";
+		Logger.info("Deep Dream prompt generated. Awaiting OpenClaw runtime execution...");
+		return this.generateDialecticPrompt(logs);
 	}
 };
 //#endregion
