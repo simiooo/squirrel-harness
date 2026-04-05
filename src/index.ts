@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { scanAllSkills } from "./skill-scanner.ts";
+import { SkillScanner } from "./skill-scanner.ts";
 import { SemanticIndexer } from "./semantic-indexer.ts";
 import { SkillRouter } from "./skill-router.ts";
 import { ReflectionEngine } from "./reflection-engine.ts";
@@ -17,9 +17,10 @@ import { Logger } from "./logger.ts";
 const main = async (): Promise<void> => {
   Logger.info("⚖️ Sikuai Harness is waking up...");
 
-  // 1. Thesis: Scan the filesystem for all available skills.
-  const skills = await scanAllSkills();
-  Logger.info(`Discovered ${skills.length} skills in the material world.`);
+  // 1. Thesis: Sync with the OpenClaw ecosystem.
+  const scanner = new SkillScanner();
+  const skills = await scanner.syncSkills();
+  Logger.info(`Discovered ${skills.length} skills in the OpenClaw ecosystem.`);
 
   if (skills.length === 0) {
     Logger.warn("No skills found. The void is empty.");
