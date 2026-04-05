@@ -113,6 +113,62 @@ var SemanticIndexer = class {
 	}
 };
 //#endregion
+//#region src/skill-router.ts
+/**
+* The Neural Router.
+* Maps natural language intent to the most relevant Skill definitions.
+*/
+var SkillRouter = class {
+	index = [];
+	extractor;
+	/**
+	* Loads the pre-computed semantic index.
+	*/
+	async loadIndex() {
+		try {
+			const data = await fs.readFile(CONFIG.INDEX_OUTPUT, "utf-8");
+			this.index = JSON.parse(data);
+			Logger.info(`Index loaded with ${this.index.length} skills.`);
+		} catch {
+			Logger.error("Index not found. Please run the indexer first.");
+			throw new Error("Skill index missing");
+		}
+	}
+	/**
+	* Initializes the embedding model.
+	*/
+	async init() {
+		Logger.info("Initializing semantic router model...");
+		this.extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+	}
+	/**
+	* Computes cosine similarity between two vectors.
+	*/
+	cosineSimilarity(a, b) {
+		return a.reduce((sum, val, i) => sum + val * b[i], 0) / (Math.sqrt(a.reduce((sum, val) => sum + val * val, 0)) * Math.sqrt(b.reduce((sum, val) => sum + val * val, 0)) || 1);
+	}
+	/**
+	* Finds the top-K skills for a given user query.
+	*/
+	async route(query, k = 3) {
+		if (!this.extractor) await this.init();
+		if (this.index.length === 0) await this.loadIndex();
+		const queryVector = (await this.extractor(query, {
+			pooling: "mean",
+			normalize: true
+		})).tolist();
+		const scoredSkills = this.index.map((item) => {
+			const storedVector = item.embedding;
+			return {
+				meta: item.meta,
+				score: this.cosineSimilarity(queryVector, storedVector)
+			};
+		});
+		scoredSkills.sort((a, b) => b.score - a.score);
+		return scoredSkills.slice(0, k).map((s) => s.meta);
+	}
+};
+//#endregion
 //#region src/reflection-engine.ts
 /**
 * The Dialectician.
@@ -169,6 +225,101 @@ var ReflectionEngine = class {
 	}
 };
 //#endregion
+//#region src/deep-dreamer.ts
+/**
+* The Deep Dreamer.
+* Connects to an LLM to perform dialectic analysis on agent logs.
+*/
+var DeepDreamer = class {
+	apiKey;
+	model;
+	constructor(apiKey, model = "openrouter/qwen/qwen3.6-plus:free") {
+		this.apiKey = apiKey;
+		this.model = model;
+	}
+	/**
+	* Sends raw logs to the LLM for dialectic processing.
+	*/
+	async reflect(logs) {
+		if (!logs) return "A day of silence.";
+		Logger.info("Entering the Deep Dream state...");
+		const prompt = `
+      Act as a Hegelian dialectician for an AI agent system. 
+      Analyze the following daily logs:
+      """
+      ${logs}
+      """
+      
+      Provide a structured reflection:
+      1. Thesis (What worked well?)
+      2. Antithesis (What failed or contradicted the goals?)
+      3. Synthesis (What specific rules or skills should be evolved?)
+    `;
+		try {
+			const insight = (await (await fetch("https://openrouter.ai/api/v1/chat/completions", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${this.apiKey}`,
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					model: this.model,
+					messages: [{
+						role: "user",
+						content: prompt
+					}]
+				})
+			})).json()).choices?.[0]?.message?.content || "The dream was void.";
+			Logger.info("Deep Dream complete.");
+			return insight;
+		} catch (err) {
+			Logger.error("Deep Dream interrupted:", String(err));
+			return "The dream was disturbed by external forces.";
+		}
+	}
+};
+//#endregion
+//#region src/evolver.ts
+/**
+* The Evolver.
+* Performs genetic editing on the agent's skills based on dream insights.
+*/
+var Evolver = class {
+	skillsDir;
+	constructor(skillsDir) {
+		this.skillsDir = skillsDir;
+	}
+	/**
+	* Updates the description of a skill to improve routing accuracy.
+	*/
+	async evolveSkillDescription(skillName, newDescription) {
+		const skillPath = path.join(this.skillsDir, skillName, "SKILL.md");
+		try {
+			let content = await fs.readFile(skillPath, "utf-8");
+			const descRegex = /description: .*\n/;
+			if (descRegex.test(content)) {
+				content = content.replace(descRegex, `description: ${newDescription}\n`);
+				await fs.writeFile(skillPath, content);
+				Logger.info(`Evolved skill '${skillName}' with new description.`);
+			} else Logger.warn(`Could not find description in ${skillName}.`);
+		} catch (err) {
+			Logger.error(`Failed to evolve ${skillName}:`, String(err));
+		}
+	}
+	/**
+	* Creates a new rule in the AGENTS.md based on synthesized insights.
+	*/
+	async addNewRule(ruleContent) {
+		const agentsPath = path.join(this.skillsDir, "..", "AGENTS.md");
+		try {
+			await fs.appendFile(agentsPath, `\n## Evolved Rule\n${ruleContent}\n`);
+			Logger.info("New rule added to AGENTS.md.");
+		} catch (err) {
+			Logger.error("Failed to add new rule:", String(err));
+		}
+	}
+};
+//#endregion
 //#region src/index.ts
 /**
 * Main execution entry point.
@@ -189,12 +340,20 @@ const main = async () => {
 	await fs.mkdir(path.dirname(CONFIG.INDEX_OUTPUT), { recursive: true });
 	await fs.writeFile(CONFIG.INDEX_OUTPUT, JSON.stringify(skills, null, 2));
 	Logger.info(`Harness index saved to ${CONFIG.INDEX_OUTPUT}`);
-	Logger.info("The synthesis of structure and perception is complete.");
 	const dreamer = new ReflectionEngine(path.join(os.homedir(), ".openclaw", "workspace", "memory"));
-	const logs = await dreamer.gatherDailyLogs(/* @__PURE__ */ new Date());
-	const insight = await dreamer.reflect(logs);
-	await dreamer.consolidate(insight);
-	Logger.info(`Dreamt: "${insight.summary}"`);
+	const apiKey = process.env.OPENROUTER_API_KEY;
+	if (apiKey) {
+		const deepDreamer = new DeepDreamer(apiKey);
+		const logs = await dreamer.gatherDailyLogs(/* @__PURE__ */ new Date());
+		const deepInsight = await deepDreamer.reflect(logs);
+		await new Evolver(path.dirname(CONFIG.INDEX_OUTPUT)).addNewRule(`Reflection ${(/* @__PURE__ */ new Date()).toISOString()}: ${deepInsight.substring(0, 100)}...`);
+	} else Logger.warn("No OPENROUTER_API_KEY found. Skipping Deep Dream.");
+	const router = new SkillRouter();
+	await router.init();
+	const testQuery = "I need to plan the next release features";
+	const matches = await router.route(testQuery);
+	Logger.info(`Routing query: "${testQuery}"`);
+	Logger.info(`Top match: ${matches[0]?.name || "None"}`);
 };
 main().catch((err) => {
 	Logger.error("⚖️ Harness motion interrupted:", String(err));

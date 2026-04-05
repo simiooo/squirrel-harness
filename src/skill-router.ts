@@ -31,10 +31,7 @@ export class SkillRouter {
    */
   async init(): Promise<void> {
     Logger.info("Initializing semantic router model...");
-    this.extractor = await pipeline(
-      "feature-extraction",
-      "Xenova/all-MiniLM-L6-v2",
-    );
+    this.extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
   }
 
   /**

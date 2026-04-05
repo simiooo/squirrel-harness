@@ -5,6 +5,8 @@ import { scanAllSkills } from "./skill-scanner.ts";
 import { SemanticIndexer } from "./semantic-indexer.ts";
 import { SkillRouter } from "./skill-router.ts";
 import { ReflectionEngine } from "./reflection-engine.ts";
+import { DeepDreamer } from "./deep-dreamer.ts";
+import { Evolver } from "./evolver.ts";
 import { CONFIG } from "./config.ts";
 import { Logger } from "./logger.ts";
 
@@ -31,19 +33,26 @@ const main = async (): Promise<void> => {
   Logger.info("Semantic mappings complete.");
 
   // 3. Synthesis: Persist the index for the agent to use.
-  const index = await indexer.indexSkills(skills);
   await fs.mkdir(path.dirname(CONFIG.INDEX_OUTPUT), { recursive: true });
-  await fs.writeFile(CONFIG.INDEX_OUTPUT, JSON.stringify(index, null, 2));
+  await fs.writeFile(CONFIG.INDEX_OUTPUT, JSON.stringify(skills, null, 2));
   Logger.info(`Harness index saved to ${CONFIG.INDEX_OUTPUT}`);
-  Logger.info("The synthesis of structure and perception is complete.");
 
-  // 4. The Dream: Reflect and Evolve.
-  const memoryDir = path.join(os.homedir(), ".openclaw", "workspace", "memory");
-  const dreamer = new ReflectionEngine(memoryDir);
-  const logs = await dreamer.gatherDailyLogs(new Date());
-  const insight = await dreamer.reflect(logs);
-  await dreamer.consolidate(insight);
-  Logger.info(`Dreamt: "${insight.summary}"`);
+  // 4. The Deep Dream & Evolution.
+  const dreamer = new ReflectionEngine(path.join(os.homedir(), ".openclaw", "workspace", "memory"));
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (apiKey) {
+    const deepDreamer = new DeepDreamer(apiKey);
+    const logs = await dreamer.gatherDailyLogs(new Date());
+    const deepInsight = await deepDreamer.reflect(logs);
+
+    const evolver = new Evolver(path.dirname(CONFIG.INDEX_OUTPUT));
+    // Example: Evolve based on insight (In a real scenario, we'd parse the LLM output)
+    await evolver.addNewRule(
+      `Reflection ${new Date().toISOString()}: ${deepInsight.substring(0, 100)}...`,
+    );
+  } else {
+    Logger.warn("No OPENROUTER_API_KEY found. Skipping Deep Dream.");
+  }
 
   // 5. Real-time Routing Demo: The Nervous System.
   const router = new SkillRouter();
